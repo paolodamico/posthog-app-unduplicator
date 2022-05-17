@@ -10,7 +10,8 @@
         "noUnusedParameters": true,
         "esModuleInterop": true,
         "noEmit": true,
-        "resolveJsonModule": true
+        "resolveJsonModule": true,
+        "skipLibCheck": true
     },
     "exclude": ["**.test.ts"]
 }

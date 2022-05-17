@@ -11,7 +11,7 @@
         "lint:fix": "eslint --fix .",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "typecheck": "tsc"
+        "typescript:check": "tsc"
     },
     "author": "",
     "license": "MIT",
