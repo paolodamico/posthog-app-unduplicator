@@ -1,5 +1,5 @@
 import { Plugin, PluginEvent } from '@posthog/plugin-scaffold'
-import { createHash } from 'crypto'
+import { createHash, randomUUID } from 'crypto'
 import { URLSearchParams } from 'url'
 
 interface UnduplicatesPluginInterface {
@@ -8,15 +8,20 @@ interface UnduplicatesPluginInterface {
     }
 }
 
-const logDuplicate = (event: PluginEvent, location: 'cache' | 'API'): void => {
-    console.log(
-        `Prevented duplicate event ingestion from ${location}. ${event.event} @ ${event.timestamp} for user ${event.distinct_id} on Project ID ${event.team_id}`
-    )
+const stringifyEvent = (event: PluginEvent): string => {
+    return `(${randomUUID().toString()}; project #${event.team_id}). Event "${event.event}" @ ${
+        event.timestamp
+    } for user ${event.distinct_id}.`
+}
+
+const logDuplicate = (stringifiedEvent: string, location: 'cache' | 'API'): void => {
+    console.info(`Prevented duplicate event ingestion from ${location}. ${stringifiedEvent}`)
 }
 
 const plugin: Plugin<UnduplicatesPluginInterface> = {
     processEvent: async (event, { cache, config }) => {
-        console.debug(`Beginning processing for ${event.event}`)
+        const stringifiedEvent = stringifyEvent(event)
+        console.debug(`Beginning processing. ${stringifiedEvent}`)
 
         if (!event.timestamp) {
             console.warn('Received event without a timestamp, this plugin will not work without it. Skipping.')
@@ -32,7 +37,7 @@ const plugin: Plugin<UnduplicatesPluginInterface> = {
 
         const cachedEvent = await cache.get(eventKey, null)
         if (cachedEvent) {
-            logDuplicate(event, 'cache')
+            logDuplicate(stringifiedEvent, 'cache')
             return null
         }
 
@@ -56,11 +61,11 @@ const plugin: Plugin<UnduplicatesPluginInterface> = {
                 if (potentialMatch.timestamp === event.timestamp) {
                     if (config.dedupMode === 'All Properties') {
                         if (JSON.stringify(event.properties) === JSON.stringify(potentialMatch.properties)) {
-                            logDuplicate(event, 'API')
+                            logDuplicate(stringifiedEvent, 'API')
                             return null
                         }
                     } else {
-                        logDuplicate(event, 'API')
+                        logDuplicate(stringifiedEvent, 'API')
                         return null
                     }
                 }
