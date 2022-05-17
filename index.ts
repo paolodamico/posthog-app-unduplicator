@@ -15,6 +15,8 @@ const logDuplicate = (event: PluginEvent, location: 'cache' | 'API'): void => {
 
 const plugin: Plugin<UnduplicatesPluginInterface> = {
     processEvent: async (event, { cache, config }) => {
+        console.debug(`Beginning processing for ${event.event}`)
+
         if (!event.timestamp) {
             console.warn('Received event without a timestamp, this plugin will not work without it. Skipping.')
             return event
@@ -34,11 +36,11 @@ const plugin: Plugin<UnduplicatesPluginInterface> = {
         }
 
         // Store event temporarily in cache to make faster checks
-        cache.set(eventKey, true, 3_600)
+        cache.set(eventKey, true, 3600)
 
         // Check if event is already stored in PostHog
         const searchTimestamp = new Date(event.timestamp)
-        searchTimestamp.setMilliseconds(searchTimestamp.getMilliseconds() - 1_000)
+        searchTimestamp.setMilliseconds(searchTimestamp.getMilliseconds() - 1000)
         const urlParams = new URLSearchParams({
             distinct_id: event.distinct_id,
             orderBy: '["-timestamp"]',
