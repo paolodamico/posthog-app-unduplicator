@@ -1,5 +1,6 @@
 import { Plugin, PluginEvent } from '@posthog/plugin-scaffold'
 import { createHash } from 'crypto'
+import { URLSearchParams } from 'url'
 
 interface UnduplicatesPluginInterface {
     config: {
