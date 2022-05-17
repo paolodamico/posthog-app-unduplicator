@@ -2,9 +2,22 @@ import { Plugin, PluginMeta } from '@posthog/plugin-scaffold'
 // @ts-ignore
 import { createPageview, resetMeta } from '@posthog/plugin-scaffold/test/utils'
 import { createHash } from 'crypto'
+import given from 'given2'
 
 import * as unduplicatesPlugin from '.'
 const { processEvent } = unduplicatesPlugin as Required<Plugin>
+
+given('getResponse', () => ({ results: [], next: null }))
+
+global.posthog = {
+    api: {
+        get: jest.fn(() =>
+            Promise.resolve({
+                json: () => Promise.resolve(given.getResponse),
+            })
+        ),
+    },
+}
 
 const defaultMeta = {
     config: {

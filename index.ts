@@ -9,6 +9,11 @@ interface UnduplicatesPluginInterface {
 
 const plugin: Plugin<UnduplicatesPluginInterface> = {
     processEvent: async (event, { cache, config }) => {
+        if (!event.timestamp) {
+            console.warn('Received event without a timestamp, this plugin will not work without it. Skipping.')
+            return event
+        }
+
         // Check if event is in cache (hashed to limit memory usage)
         const stringifiedProps = config.dedupMode === 'All Properties' ? `_${JSON.stringify(event.properties)}` : ''
         const hash = createHash('sha1')
@@ -25,10 +30,20 @@ const plugin: Plugin<UnduplicatesPluginInterface> = {
         }
 
         // Check if event is already stored in PostHog
-        // const response = await global.posthog.api.get('/events')
-        // if (response.results && response.results.length) {
-        //     // Check against duplicates here
-        // }
+        const searchTimestamp = new Date(event.timestamp)
+        searchTimestamp.setMilliseconds(searchTimestamp.getMilliseconds() - 1_000)
+        const urlParams = new URLSearchParams({
+            distinct_id: event.distinct_id,
+            orderBy: '["-timestamp"]',
+            event: event.event,
+            after: searchTimestamp.toISOString(),
+        })
+        const response = await (
+            await posthog.api.get(`/api/projects/${event.team_id}/events/?${urlParams.toString()}`)
+        ).json()
+        if (response.results && response.results.length) {
+            // Check against duplicates here
+        }
 
         // Store event temporarily in cache to make faster checks
         cache.set(eventKey, true, 3_600)
