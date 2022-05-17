@@ -1,10 +1,16 @@
-import { Plugin } from '@posthog/plugin-scaffold'
+import { Plugin, PluginEvent } from '@posthog/plugin-scaffold'
 import { createHash } from 'crypto'
 
 interface UnduplicatesPluginInterface {
     config: {
         dedupMode: 'Event and Timestamp' | 'All Properties'
     }
+}
+
+const logDuplicate = (event: PluginEvent, location: 'cache' | 'API'): void => {
+    console.log(
+        `Prevented duplicate event ingestion from ${location}. ${event.event} @ ${event.timestamp} for user ${event.distinct_id} on Project ID ${event.team_id}`
+    )
 }
 
 const plugin: Plugin<UnduplicatesPluginInterface> = {
@@ -23,11 +29,12 @@ const plugin: Plugin<UnduplicatesPluginInterface> = {
 
         const cachedEvent = await cache.get(eventKey, null)
         if (cachedEvent) {
-            console.log(
-                `Prevented duplicate event ingestion. ${event.event} @ ${event.timestamp} for user ${event.distinct_id} on Project ID ${event.team_id}`
-            )
+            logDuplicate(event, 'cache')
             return null
         }
+
+        // Store event temporarily in cache to make faster checks
+        cache.set(eventKey, true, 3_600)
 
         // Check if event is already stored in PostHog
         const searchTimestamp = new Date(event.timestamp)
@@ -42,11 +49,20 @@ const plugin: Plugin<UnduplicatesPluginInterface> = {
             await posthog.api.get(`/api/projects/${event.team_id}/events/?${urlParams.toString()}`)
         ).json()
         if (response.results && response.results.length) {
-            // Check against duplicates here
+            for (const potentialMatch of response.results as PluginEvent[]) {
+                if (potentialMatch.timestamp === event.timestamp) {
+                    if (config.dedupMode === 'All Properties') {
+                        if (JSON.stringify(event.properties) === JSON.stringify(potentialMatch.properties)) {
+                            logDuplicate(event, 'API')
+                            return null
+                        }
+                    } else {
+                        logDuplicate(event, 'API')
+                        return null
+                    }
+                }
+            }
         }
-
-        // Store event temporarily in cache to make faster checks
-        cache.set(eventKey, true, 3_600)
 
         return event
     },
