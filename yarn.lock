@@ -2106,6 +2106,11 @@ get-value@^2.0.3, get-value@^2.0.6:
   resolved "https://registry.yarnpkg.com/get-value/-/get-value-2.0.6.tgz#dc15ca1c672387ca76bd37ac0a395ba2042a2c28"
   integrity sha1-3BXKHGcjh8p2vTesCjlbogQqLCg=
 
+given2@^2.1.7:
+  version "2.1.7"
+  resolved "https://registry.yarnpkg.com/given2/-/given2-2.1.7.tgz#4c2c7883d7ee1069d077c10551ef2e607943ebd3"
+  integrity sha512-fI3VamsjN2euNVguGpSt2uExyDSMfJoK+SwDxbmV+Thf3v4oF6KKZAFE3LHHuT+PYyMwCsJYXO01TW3euFdPGA==
+
 glob-parent@^5.1.2:
   version "5.1.2"
   resolved "https://registry.yarnpkg.com/glob-parent/-/glob-parent-5.1.2.tgz#869832c58034fe68a4093c17dc15e8340d8401c4"

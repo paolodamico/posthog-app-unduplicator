@@ -1,4 +1,4 @@
-import { Plugin } from '@posthog/plugin-scaffold'
+import { Plugin, PluginEvent } from '@posthog/plugin-scaffold'
 import { createHash } from 'crypto'
 
 interface UnduplicatesPluginInterface {
@@ -7,8 +7,21 @@ interface UnduplicatesPluginInterface {
     }
 }
 
+const logDuplicate = (event: PluginEvent, location: 'cache' | 'API'): void => {
+    console.log(
+        `Prevented duplicate event ingestion from ${location}. ${event.event} @ ${event.timestamp} for user ${event.distinct_id} on Project ID ${event.team_id}`
+    )
+}
+
 const plugin: Plugin<UnduplicatesPluginInterface> = {
     processEvent: async (event, { cache, config }) => {
+        console.debug(`Beginning processing for ${event.event}`)
+
+        if (!event.timestamp) {
+            console.warn('Received event without a timestamp, this plugin will not work without it. Skipping.')
+            return event
+        }
+
         // Check if event is in cache (hashed to limit memory usage)
         const stringifiedProps = config.dedupMode === 'All Properties' ? `_${JSON.stringify(event.properties)}` : ''
         const hash = createHash('sha1')
@@ -18,20 +31,40 @@ const plugin: Plugin<UnduplicatesPluginInterface> = {
 
         const cachedEvent = await cache.get(eventKey, null)
         if (cachedEvent) {
-            console.log(
-                `Prevented duplicate event ingestion. ${event.event} @ ${event.timestamp} for user ${event.distinct_id} on Project ID ${event.team_id}`
-            )
+            logDuplicate(event, 'cache')
             return null
         }
 
-        // Check if event is already stored in PostHog
-        // const response = await global.posthog.api.get('/events')
-        // if (response.results && response.results.length) {
-        //     // Check against duplicates here
-        // }
-
         // Store event temporarily in cache to make faster checks
-        cache.set(eventKey, true, 3_600)
+        cache.set(eventKey, true, 3600)
+
+        // Check if event is already stored in PostHog
+        const searchTimestamp = new Date(event.timestamp)
+        searchTimestamp.setMilliseconds(searchTimestamp.getMilliseconds() - 1000)
+        const urlParams = new URLSearchParams({
+            distinct_id: event.distinct_id,
+            orderBy: '["-timestamp"]',
+            event: event.event,
+            after: searchTimestamp.toISOString(),
+        })
+        const response = await (
+            await posthog.api.get(`/api/projects/${event.team_id}/events/?${urlParams.toString()}`)
+        ).json()
+        if (response.results && response.results.length) {
+            for (const potentialMatch of response.results as PluginEvent[]) {
+                if (potentialMatch.timestamp === event.timestamp) {
+                    if (config.dedupMode === 'All Properties') {
+                        if (JSON.stringify(event.properties) === JSON.stringify(potentialMatch.properties)) {
+                            logDuplicate(event, 'API')
+                            return null
+                        }
+                    } else {
+                        logDuplicate(event, 'API')
+                        return null
+                    }
+                }
+            }
+        }
 
         return event
     },

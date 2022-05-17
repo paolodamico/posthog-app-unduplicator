@@ -10,4 +10,5 @@ module.exports = {
     preset: 'ts-jest',
     testEnvironment: 'node',
     moduleNameMapper,
+    setupFilesAfterEnv: ['given2/setup'],
 }
