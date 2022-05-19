@@ -56,6 +56,8 @@ const plugin: Plugin<UnduplicatesPluginInterface> = {
         const response = await (
             await posthog.api.get(`/api/projects/${event.team_id}/events/?${urlParams.toString()}`)
         ).json()
+        
+        // a bit 🍝 no? can we simplify this?
         if (response.results && response.results.length) {
             for (const potentialMatch of response.results as PluginEvent[]) {
                 if (potentialMatch.timestamp === event.timestamp) {
