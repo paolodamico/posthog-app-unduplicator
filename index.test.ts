@@ -81,8 +81,11 @@ describe('`All Properties` mode', () => {
                 ...createPageview(),
                 event: 'myPageview',
                 timestamp: '2020-05-02T20:59:59.999999Z',
-                customProp1: true,
-                customProp2: 'lgtm!',
+                properties: {
+                    ...createPageview().properties,
+                    customProp1: true,
+                    customProp2: 'lgtm!',
+                },
             },
             meta
         )
