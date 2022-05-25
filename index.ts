@@ -2,6 +2,8 @@ import { Plugin, PluginEvent } from '@posthog/plugin-scaffold'
 import { createHash, randomUUID } from 'crypto'
 import { URLSearchParams } from 'url'
 
+const NAMESPACE_OID = '6ba7b812-9dad-11d1-80b4-00c04fd430c8' // From RFC #4122
+
 interface UnduplicatesPluginInterface {
     config: {
         dedupMode: 'Event and Timestamp' | 'All Properties'
@@ -14,64 +16,65 @@ const stringifyEvent = (event: PluginEvent): string => {
     } for user ${event.distinct_id}.`
 }
 
-const logDuplicate = (stringifiedEvent: string, location: 'cache' | 'API'): void => {
-    console.info(`Prevented duplicate event ingestion from ${location}. ${stringifiedEvent}`)
+const byteToHex: string[] = []
+
+for (let i = 0; i < 256; ++i) {
+    byteToHex.push((i + 0x100).toString(16).slice(1))
+}
+
+function stringifyUUID(arr: Buffer) {
+    // Forked from https://github.com/uuidjs/uuid (MIT)
+    // Copyright (c) 2010-2020 Robert Kieffer and other contributors
+    return (
+        byteToHex[arr[0]] +
+        byteToHex[arr[1]] +
+        byteToHex[arr[2]] +
+        byteToHex[arr[3]] +
+        '-' +
+        byteToHex[arr[4]] +
+        byteToHex[arr[5]] +
+        '-' +
+        byteToHex[arr[6]] +
+        byteToHex[arr[7]] +
+        '-' +
+        byteToHex[arr[8]] +
+        byteToHex[arr[9]] +
+        '-' +
+        byteToHex[arr[10]] +
+        byteToHex[arr[11]] +
+        byteToHex[arr[12]] +
+        byteToHex[arr[13]] +
+        byteToHex[arr[14]] +
+        byteToHex[arr[15]]
+    ).toLowerCase()
 }
 
 const plugin: Plugin<UnduplicatesPluginInterface> = {
-    processEvent: async (event, { cache, config }) => {
+    processEvent: async (event, { config }) => {
         const stringifiedEvent = stringifyEvent(event)
         console.debug(`Beginning processing. ${stringifiedEvent}`)
 
         if (!event.timestamp) {
-            console.warn('Received event without a timestamp, this plugin will not work without it. Skipping.')
+            console.info(
+                'Received event without a timestamp, the event will not be processed because deduping will not work.'
+            )
             return event
         }
 
-        // Check if event is in cache (hashed to limit memory usage)
+        // Create a hash of the relevant properties of the event
         const stringifiedProps = config.dedupMode === 'All Properties' ? `_${JSON.stringify(event.properties)}` : ''
         const hash = createHash('sha1')
-        const eventKey = hash
-            .update(`${event.team_id}_${event.distinct_id}_${event.event}_${event.timestamp}${stringifiedProps}`)
-            .digest('hex')
+        const eventKeyBuffer = hash
+            .update(
+                `${NAMESPACE_OID}_${event.team_id}_${event.distinct_id}_${event.event}_${event.timestamp}${stringifiedProps}`
+            )
+            .digest()
 
-        const cachedEvent = await cache.get(eventKey, null)
-        if (cachedEvent) {
-            logDuplicate(stringifiedEvent, 'cache')
-            return null
-        }
+        // Convert to UUID v5 spec
+        eventKeyBuffer[6] = (eventKeyBuffer[6] & 0x0f) | 0x50
+        eventKeyBuffer[8] = (eventKeyBuffer[8] & 0x3f) | 0x80
 
-        // Store event temporarily in cache to make faster checks
-        cache.set(eventKey, true, 3600)
-
-        // Check if event is already stored in PostHog
-        const searchTimestamp = new Date(event.timestamp)
-        searchTimestamp.setMilliseconds(searchTimestamp.getMilliseconds() - 1000)
-        const urlParams = new URLSearchParams({
-            distinct_id: event.distinct_id,
-            orderBy: '["-timestamp"]',
-            event: event.event,
-            after: searchTimestamp.toISOString(),
-        })
-        const response = await (
-            await posthog.api.get(`/api/projects/${event.team_id}/events/?${urlParams.toString()}`)
-        ).json()
-        if (response.results && response.results.length) {
-            for (const potentialMatch of response.results as PluginEvent[]) {
-                if (potentialMatch.timestamp === event.timestamp) {
-                    if (config.dedupMode === 'All Properties') {
-                        if (JSON.stringify(event.properties) === JSON.stringify(potentialMatch.properties)) {
-                            logDuplicate(stringifiedEvent, 'API')
-                            return null
-                        }
-                    } else {
-                        logDuplicate(stringifiedEvent, 'API')
-                        return null
-                    }
-                }
-            }
-        }
-
+        event.uuid = stringifyUUID(eventKeyBuffer)
         return event
     },
 }
