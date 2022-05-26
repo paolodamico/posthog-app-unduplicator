@@ -1,17 +1,20 @@
-<img src="logo.png" alt="Unduplicates plugin logo" height="100" />
+<img src="logo.png" alt="Unduplicates app logo" height="100" />
 
-# PostHog Community Plugin: Unduplicates
+# PostHog Community App: Unduplicates
 
-This plugin helps prevent duplicate events from being ingested into PostHog. It's particularly helpful if you're backfilling information as you're already ingesting ongoing events. The plugin scopes duplicates for each individual project. The plugin has two modes.
+This app helps prevent duplicate events from being ingested into PostHog. It's particularly helpful if you're backfilling information while you're already ingesting ongoing events. The app crafts an event UUID based on key properties for the event so if the event is _the same_ (see below for definition) it'll end with the same UUID.
 
--   **Event and Timestamp**. An event will be treated as duplicate if the timestamp, event name, user's distinct ID matches exactly (in the scope of each project), regardless of what properties are included.
--   **All Properties**. An event will be treated as duplicate only all properties match exactly, as well as the timestamp, event name, user's distinct ID.
+When events areprocessed by ClickHouse, the DB will automatically dedupe events which have the same `toDate(timestamp)`,
+`event`, `distinct_id` and `uuid` combo, effectively making sure duplicates are not stored.
 
-The plugin uses temporary cache to perform faster checks and uses PostHog's API to check if duplicate events have already been ingested.
+The app has two modes (which essentially define what's considered a duplicate event). Either mode will scope duplicates to a **each project**, duplicates across projects are still permitted.
+
+-   **Event and Timestamp**. An event will be treated as duplicate if the timestamp, event name and user's distinct ID matches exactly, regardless of what internal properties are included.
+-   **All Properties**. An event will be treated as duplicate only all properties match exactly, as well as the timestamp, event name and user's distinct ID.
 
 ## 🚀 Usage
 
-To use it simply install the plugin from the repository URL: https://github.com/paolodamico/posthog-plugin-unduplicates or search for it in the PostHog Plugin Library.
+To use it simply install the app from the repository URL: https://github.com/paolodamico/posthog-app-unduplicates or search for it in the PostHog App Library.
 
 ## 🧑‍💻 Development & testing
 
@@ -25,7 +28,7 @@ Contributions are welcomed! Feel free to open a PR or an issue. To develop local
     ```bash
     yarn test
     ```
--   Install plugin in your local instance by going to `/project/plugins` in your PostHog instance, clicking on the "Advanced" tab and entering the full path where you cloned the repo. Please note that running plugins locally on PostHog is currently buggy (see [posthog#7170](https://github.com/PostHog/posthog/issues/7170)).
+-   Install app in your local instance by going to `/project/apps` in your PostHog instance, clicking on the "Advanced" tab and entering the full path where you cloned the repo. Please note that running apps locally on PostHog is currently buggy (see [posthog#7170](https://github.com/PostHog/posthog/issues/7170)).
 
 ## 🧑‍⚖️ License
 
