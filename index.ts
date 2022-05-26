@@ -1,8 +1,8 @@
 import { Plugin, PluginEvent } from '@posthog/plugin-scaffold'
 import { createHash, randomUUID } from 'crypto'
-import { URLSearchParams } from 'url'
 
-const NAMESPACE_OID = '6ba7b812-9dad-11d1-80b4-00c04fd430c8' // From RFC #4122
+// From UUID Namespace RFC (https://datatracker.ietf.org/doc/html/rfc4122)
+const NAMESPACE_OID = '6ba7b812-9dad-11d1-80b4-00c04fd430c8'
 
 interface UnduplicatesPluginInterface {
     config: {
