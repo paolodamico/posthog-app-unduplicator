@@ -1,6 +1,6 @@
-<img src="logo.png" alt="Unduplicates app logo" height="100" />
+<img src="logo.png" alt="Unduplicator app logo" height="100" />
 
-# PostHog Community App: Unduplicates
+# PostHog Community App: Unduplicator
 
 This app helps prevent duplicate events from being ingested into PostHog. It's particularly helpful if you're backfilling information while you're already ingesting ongoing events. The app crafts an event UUID based on key properties for the event so if the event is _the same_ (see below for definition) it'll end with the same UUID.
 
@@ -14,7 +14,7 @@ The app has two modes (which essentially define what's considered a duplicate ev
 
 ## 🚀 Usage
 
-To use it simply install the app from the repository URL: https://github.com/paolodamico/posthog-app-unduplicates or search for it in the PostHog App Library.
+To use it simply install the app from the repository URL: https://github.com/paolodamico/posthog-app-unduplicator or search for it in the PostHog App Library.
 
 ## 🧑‍💻 Development & testing
 
