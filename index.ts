@@ -52,7 +52,6 @@ function stringifyUUID(arr: Buffer) {
 const plugin: Plugin<UnduplicatesPluginInterface> = {
     processEvent: async (event, { config }) => {
         const stringifiedEvent = stringifyEvent(event)
-        console.debug(`Beginning processing. ${stringifiedEvent}`)
 
         if (!event.timestamp) {
             console.info(
