@@ -11,9 +11,7 @@ interface UnduplicatesPluginInterface {
 }
 
 const stringifyEvent = (event: PluginEvent): string => {
-    return `(${randomUUID().toString()}; project #${event.team_id}). Event "${event.event}" @ ${
-        event.timestamp
-    } for user ${event.distinct_id}.`
+    return `(${randomUUID().toString()}; project #${event.team_id}). Event "${event.event}" @ ${event.timestamp} for user ${event.distinct_id}.`
 }
 
 const byteToHex: string[] = []
@@ -55,7 +53,7 @@ const plugin: Plugin<UnduplicatesPluginInterface> = {
 
         if (!event.timestamp) {
             console.info(
-                'Received event without a timestamp, the event will not be processed because deduping will not work.'
+                `Received event without a timestamp: ${stringifiedEvent}, the event will not be processed because deduping will not work.`
             )
             return event
         }
